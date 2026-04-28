@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Universo- Vicpersi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Quicksand',sans-serif;}
+    canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;}
+    #modal{position:fixed;inset:0;z-index:9999;display:flex;justify-content:center;align-items:center;background:#F9B8D4;transition:opacity 1s ease;}
+    #modal.oculto{opacity:0;pointer-events:none;}
+    .card{background:#fff;border-radius:28px;padding:26px 26px 30px;width:min(340px, 88vw);display:flex;flex-direction:column;align-items:center;box-shadow:0 6px 32px rgba(220,80,130,0.13);}
+    .card-img-wrap{width:100%;border-radius:14px;overflow:hidden;margin-bottom:22px;aspect-ratio:4/3;background:#0a0015;}
+    .card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;border-radius:14px;}
+    .card-quote{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.15rem,4.5vw,1.35rem);color:#1a1a2e;text-align:center;line-height:1.45;margin-bottom:10px;}
+    .card-sub{font-size:0.62rem;font-weight:600;letter-spacing:5px;text-transform:uppercase;color:rgba(180,80,140,0.55);margin-bottom:26px;}
+    #btn-entrar{width:100%;font-family:'Quicksand',sans-serif;font-size:0.74rem;font-weight:600;letter-spacing:4px;text-transform:uppercase;padding:1rem 0;background:#fff;color:#E0306A;border:1.5px solid #E0306A;border-radius:50px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;}
+    .top-text{position:fixed;top:5%;left:50%;transform:translateX(-50%);font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.1rem,3.5vw,1.9rem);color:rgba(255,210,235,0.82);z-index:10;pointer-events:none;display:none;text-shadow:0 0 28px rgba(255,100,180,0.45);white-space:nowrap;}
+    #hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-size:0.62rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,180,220,0.25);pointer-events:none;z-index:10;display:none;}
+  </style>
+</head>
+<body>
+
+<div id="modal">
+  <div class="card">
+    <div class="card-img-wrap"><img src="https://i.postimg.cc/mgpQLsR9/desktop-wallpaper-cats-tumblr-galaxy-galaxy-cat.jpg"></div>
+    <div class="card-quote">Eres el centro de mi universo. Te amo. 🌌</div>
+    <div class="card-sub">De parte de Vicpersi · Solo para ti</div>
+    <button id="btn-entrar">♡ Toca aquí, ♡</button>
+  </div>
+</div>
+
+<div class="top-text" id="top-text">Creador Vic persi♡</div>
+<div id="hint">Disfruta el viaje espacial...</div>
+<canvas id="galaxy"></canvas>
+
+<audio id="musica" loop><source src="https://github.com/codeninja543/codeninja5433/raw/refs/heads/main/Umberto%20Tozzi%20-%20Te%20Amo%20(Letra).mp3" type="audio/mpeg"></audio>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+let autoCameraActive = false;
+const isMobile=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+// --- RUTA CINEMATOGRÁFICA (A LOS LADOS Y POR EN MEDIO) ---
+const flightCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(1000, 300, 1000), // Lado
+  new THREE.Vector3(600, 100, 200),   // Acercándose
+  new THREE.Vector3(0, 135, 0),       // POR EN MEDIO (Agujero Negro/Corazón)
+  new THREE.Vector3(-600, -100, -200),// Saliendo por el otro lado
+  new THREE.Vector3(0, 500, -1000),   // Vuelta por arriba
+  new THREE.Vector3(1000, 200, 0)     // Regreso lateral
+]);
+flightCurve.closed = true;
+
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('galaxy'), antialias:!isMobile, alpha:true, powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.5:2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=0.90;
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,200000);
+camera.position.set(0,300,900);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.addEventListener('start', () => { autoCameraActive = false; });
+
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight));
+bloom.threshold=0.65; bloom.strength=0.42; bloom.radius=0.30;
+composer.addPass(bloom);
+
+const col=new THREE.Color();
+
+// Estrellas fondo (Original)
+(function(){
+  const n=isMobile?1200:2500; const pos=new Float32Array(n*3),color=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const i3=i*3; const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=12000+Math.random()*60000;
+    pos[i3]=r*Math.sin(ph)*Math.cos(th); pos[i3+1]=r*Math.sin(ph)*Math.sin(th); pos[i3+2]=r*Math.cos(ph);
+    col.setHSL(0.0,0.0,0.95); color[i3]=col.r; color[i3+1]=col.g; color[i3+2]=col.b;
+  }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(color,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:2.4,vertexColors:true,blending:THREE.AdditiveBlending,transparent:true,opacity:0.65,depthWrite:false})));
+})();
+
+// Galaxia Espiral (Original Completa)
+let galaxyMesh, armsMesh;
+(function(){
+  const n=isMobile?35000:65000; const pos=new Float32Array(n*3),color=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const i3=i*3, arm=i%5, t=Math.pow(Math.random(),0.55), rad=60+t*980, ang=(arm/5)*Math.PI*2 + t*4.5 + (Math.random()-.5)*0.38*(1+t*1.5);
+    pos[i3]=Math.cos(ang)*rad; pos[i3+1]=(Math.random()-.5)*55*Math.exp(-rad/500); pos[i3+2]=Math.sin(ang)*rad;
+    const nt=rad/1050;
+    if(nt<0.1) col.setHSL(0.05,0.15,0.96); else if(nt<0.3) col.setHSL(0.93,0.80,0.80); else col.setHSL(0.95,0.85,0.62);
+    color[i3]=col.r; color[i3+1]=col.g; color[i3+2]=col.b;
+  }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(color,3));
+  galaxyMesh=new THREE.Points(g,new THREE.PointsMaterial({size:2.1,vertexColors:true,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:0.92}));
+  scene.add(galaxyMesh);
+})();
+
+// Agujero Negro y Halo (Original)
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(42,64,64),new THREE.MeshBasicMaterial({color:0x000000})));
+const haloMat=new THREE.ShaderMaterial({
+  uniforms:{uTime:{value:0}},
+  vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform float uTime;varying vec3 vN;void main(){float rim=pow(1.-max(dot(vN,vec3(0,0,1)),0.),3.0);gl_FragColor=vec4(mix(vec3(.28,.0,.12),vec3(.95,.28,.62),rim)*rim*(0.78+0.18*sin(uTime*1.8)),rim*0.48);}`,
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(53,64,64),haloMat));
+
+// --- TUS DISCOS DE ACRECIÓN ORIGINALES (CON TU SHADER DE RUIDO) ---
+function mkDisk(inner,outer,c1,c2,c3,op,rx){
+  const mat=new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0},uIn:{value:inner},uOut:{value:outer},uC1:{value:new THREE.Color(c1)},uC2:{value:new THREE.Color(c2)},uC3:{value:new THREE.Color(c3)}},
+    vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`uniform float uTime,uIn,uOut;uniform vec3 uC1,uC2,uC3;varying vec3 vP;
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){
+        float r=length(vP.xy);float t=clamp((r-uIn)/(uOut-uIn),0.,1.);
+        vec3 c=t<.4?mix(uC1,uC2,t/.4):mix(uC2,uC3,(t-.4)/.6);
+        float ang=atan(vP.y,vP.x);float sw=h(vec2(r*.1,ang+uTime*.25))*.22;
+        gl_FragColor=vec4(c*((1.-t)*(1.-t)*1.1+sw*.25),clamp((1.-t)*(1.-t*t)*${op}+sw*.08,0.,1.));
+      }`,
+    side:THREE.DoubleSide,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
+  });
+  const m=new THREE.Mesh(new THREE.RingGeometry(inner,outer,256,8),mat);
+  m.rotation.x=rx;scene.add(m);return mat;
+}
+const dM1=mkDisk(48,165,'#FFFFFF','#FFB8D8','#880044',0.60,Math.PI/2);
+const dM2=mkDisk(56,132,'#FFD6E8','#E8508A','#3D001A',0.32,Math.PI/2+0.13);
+const dM3=mkDisk(165,295,'#FF8CB8','#AA0050','#000000',0.16,Math.PI/2);
+
+// Jets y Corazón (Original)
+function mkJet(dir){
+  const mat=new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0}},
+    vertexShader:`varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`uniform float uTime;varying vec2 vU;void main(){float f=pow(1.-vU.y,2.)*(1.-vU.x*2.);float p=.6+.28*sin(uTime*3.8+vU.y*9.);gl_FragColor=vec4(mix(vec3(1.,.72,.88),vec3(.72,.0,.38),vU.y)*p,f*0.32);}`,
+    transparent:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false
+  });
+  const m=new THREE.Mesh(new THREE.ConeGeometry(8,225,32,1,true),mat);
+  m.position.y=dir*112;m.rotation.x=dir>0?0:Math.PI;scene.add(m);return mat;
+}
+const jM1=mkJet(1),jM2=mkJet(-1);
+
+const hN=8000,hP=new Float32Array(hN*3),hC=new Float32Array(hN*3);
+for(let i=0;i<hN;i++){
+  const i3=i*3,t=Math.random()*Math.PI*2,s=0.45+Math.random()*0.55,x=16*Math.pow(Math.sin(t),3),y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
+  hP[i3]=x*s*3.8; hP[i3+1]=y*s*3.8; hP[i3+2]=(Math.random()-.5)*12;
+  col.setHSL(0.94,0.95,0.60); hC[i3]=col.r; hC[i3+1]=col.g; hC[i3+2]=col.b;
+}
+const heart=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({size:2.6,vertexColors:true,blending:THREE.NormalBlending,transparent:true,opacity:0.97}));
+heart.geometry.setAttribute('position',new THREE.BufferAttribute(hP,3)); heart.geometry.setAttribute('color',new THREE.BufferAttribute(hC,3));
+heart.position.y=135; scene.add(heart);
+
+// --- TUS 80 FRASES CON DISEÑO ORIGINAL (SOMBRA Y CONTORNO) ---
+const phrases=["Te amo  ❤️","Vicpersi","Programador ","Mi Amor Eterno","Para 🌹 ","Contigo Siempre"," Mi Cielo"];
+const tGrp=new THREE.Group();scene.add(tGrp);const sMs=[];
+for(let i=0;i<80;i++){
+  const cv=document.createElement('canvas');cv.width=1100;cv.height=240;const cx=cv.getContext('2d');
+  cx.font="bold 105px Quicksand"; cx.strokeStyle='rgba(0,0,0,0.6)'; cx.lineWidth=10; cx.strokeText(phrases[i%phrases.length],550,122);
+  cx.shadowColor='#C2185B'; cx.shadowBlur=28; cx.fillStyle='#FF69B4'; cx.textAlign='center'; cx.fillText(phrases[i%phrases.length],550,122);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false,opacity:0}));
+  const r=180+(i/80)*850, ang=(i%5/5)*Math.PI*2+(i/80)*Math.PI*4.2;
+  sp.position.set(Math.cos(ang)*r,(Math.random()-.5)*120,Math.sin(ang)*r); sp.scale.set(155,35,1); tGrp.add(sp); sMs.push(sp.material);
+}
+
+// Emojis (Original)
+const eGrp=new THREE.Group();scene.add(eGrp);const emojis=['💖','💕','🌸','✨','🌹'];
+for(let i=0;i<24;i++){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=256;const cx=cv.getContext('2d');
+  cx.font="195px Arial"; cx.textAlign='center'; cx.fillText(emojis[i%emojis.length],128,150);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(52,52),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));
+  const a=i/24*Math.PI*2,r=195+Math.random()*620;
+  m.position.set(Math.cos(a)*r,(Math.random()-.5)*115,Math.sin(a)*r); eGrp.add(m);
+}
+
+document.getElementById('btn-entrar').addEventListener('click',()=>{
+  document.getElementById('modal').classList.add('oculto');
+  document.getElementById('top-text').style.display='block';
+  const a=document.getElementById('musica'); a.currentTime=16; a.play();
+  setTimeout(()=>autoCameraActive=true, 2000);
+});
+
+const clock=new THREE.Clock();
+function loop(){
+  requestAnimationFrame(loop); const t=clock.getElapsedTime();
+  galaxyMesh.rotation.y=t*0.022; tGrp.rotation.y=t*0.016; eGrp.rotation.y=t*0.01;
+  heart.rotation.y+=0.0035; heart.position.y=135+Math.sin(t*1.7)*7;
+  haloMat.uniforms.uTime.value=t; dM1.uniforms.uTime.value=t; dM2.uniforms.uTime.value=t; dM3.uniforms.uTime.value=t;
+  jM1.uniforms.uTime.value=t; jM2.uniforms.uTime.value=t;
+  eGrp.children.forEach(m=>m.lookAt(camera.position));
+  sMs.forEach((m,i)=>{m.opacity=THREE.MathUtils.lerp(m.opacity,0.88+Math.sin(t*1.4+i)*0.1,0.022);});
+
+  // --- MOVIMIENTO DE CÁMARA POR LOS LADOS Y POR EL MEDIO ---
+  if(autoCameraActive){
+    const p = (t * 0.04) % 1;
+    const pos = flightCurve.getPointAt(p);
+    camera.position.lerp(pos, 0.05);
+    camera.lookAt(0,0,0);
+  }
+  controls.update(); composer.render();
+}
+loop();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
